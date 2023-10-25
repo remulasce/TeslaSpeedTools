@@ -14,10 +14,10 @@ SRPLUS_TORQUE_MODEL_PARAMS = {
     'cliff_speed': 65.99973045750038, 'cliff_v': 0.0003816897486626024,
     'fw_v_a': 0.011468594400665411, 'fw_accelerator_a': 1.6758878532006707,
     # Would be fw_a_hi, fw_b_hi
-    'fw_curve_hi': {'fw_a': -896.3746078952913, 'fw_b': -7.586995411250427,
+    'hi': {'fw_a': -896.3746078952913, 'fw_b': -7.586995411250427,
                     'fw_c': -1862.9018403847551, 'fw_d': 32.42677224719758},
     # Would be fw_a_lo, fw_b_lo
-    'fw_curve_lo': {'fw_a': -1.1925343705085474, 'fw_b': 1.1119491977554612,
+    'lo': {'fw_a': -1.1925343705085474, 'fw_b': 1.1119491977554612,
                     'fw_c': 4.984857284976331, 'fw_d': 58.69134821315341}}
 
 # So the fw_v_a didn't change, probably because it's not actually included/necessary. Mostly fw_b and fw_d.
@@ -37,14 +37,13 @@ def fw_constants_from_params(*params):
     return {key: value for (key, value) in zip(keys, params)}
 
 
-def full_flat_params(params_dict, prefix=None):
+def full_flat_params(params_dict, suffix=None):
     indict = {}
     for (key, value) in params_dict.items():
-        print(f"{key}, {value} for {prefix}")
         if isinstance(value, dict):
             indict.update(full_flat_params(value, key))
         else:
-            indict[prefix + "_" + key if prefix is not None else key] = value
+            indict[key + "_" + suffix if suffix is not None else key] = value
     return indict
 
 
@@ -287,7 +286,9 @@ def predict_torque_voltage_log_constants(
 
 def curve_fit_torque(trace_data, fn=predict_torque_expanded_params, guess=None):
     if guess is None:
-        guess = SRPLUS_TORQUE_MODEL_PARAMS.values()
+        guess = SRPLUS_TORQUE_MODEL_PARAMS
+    if isinstance(guess, dict):
+        guess = list(full_flat_params(guess).values())
 
     trace_data = trace_data.sample(100)  # Maybe reconsider this
     all_frames = trace_data[[e.value for e in PC]].to_numpy().transpose()
