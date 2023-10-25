@@ -7,15 +7,6 @@ from scipy.optimize import curve_fit
 import data
 from data import *
 
-VOLTAGE_MODELLED_PARAMS_FW_ORIG = {
-    'tq_max': 469.125, 'tq_accelerator_a': 6.612412744169433,
-    'cliff_speed': 65.99973045750038, 'cliff_v': 0.0003816897486626024,
-    'fw_v_a': 0.011338546732219436, 'fw_accelerator_a': 1.6758878532006707,
-    'fw_curve_hi': {'fw_a': -949.0857150401879, 'fw_b': -7.5869936115238215,
-                    'fw_c': -1840.013794544997, 'fw_d': 32.42677225277174},
-    'fw_curve_lo': {'fw_a': -1.126647240255788, 'fw_b': 2.1343893258989652,
-                    'fw_c': 4.2172993097895395, 'fw_d': 56.62343558462136}
-}
 
 # This should be the current best-fit, using hi/lo curves.
 VOLTAGE_MODELLED_PARAMS_FW = {
