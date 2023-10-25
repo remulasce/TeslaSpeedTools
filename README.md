@@ -11,6 +11,7 @@ This is partially just a dump of separate features. Major ones:
 * Graphing of speed, voltages, etc. Use dash_test.py
 * Predict how much torque the car _should_ be making under current conditions (speed, voltage), for purpose of evaluating thermal restrictions.
   * Automatically added to dash_test.py analysis
+  * Add predictions to a standalone .csv file adding the trace to predict_in folder and using shortcuts therein.
 * Produce the torque predictions
   * See functions in models.py
 
