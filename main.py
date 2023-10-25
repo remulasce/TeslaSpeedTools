@@ -25,7 +25,7 @@ def main():
 
     # model = models.SRPLUS_TORQUE_MODEL_PARAMS
     # model = tune_all_params(files=files)
-    model = tune_fw_log_constants(files=model_files)
+    model = tune_all_params(files=model_files)
     # model = tune_params(files=Files.th_all)
 
     print("Plotting....")

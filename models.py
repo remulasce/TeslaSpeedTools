@@ -13,8 +13,10 @@ SRPLUS_TORQUE_MODEL_PARAMS = {
     'tq_max': 469.125, 'tq_accelerator_a': 6.612412744169433,
     'cliff_speed': 65.99973045750038, 'cliff_v': 0.0003816897486626024,
     'fw_v_a': 0.011468594400665411, 'fw_accelerator_a': 1.6758878532006707,
+    # Would be fw_a_hi, fw_b_hi
     'fw_curve_hi': {'fw_a': -896.3746078952913, 'fw_b': -7.586995411250427,
                     'fw_c': -1862.9018403847551, 'fw_d': 32.42677224719758},
+    # Would be fw_a_lo, fw_b_lo
     'fw_curve_lo': {'fw_a': -1.1925343705085474, 'fw_b': 1.1119491977554612,
                     'fw_c': 4.984857284976331, 'fw_d': 58.69134821315341}}
 
@@ -33,6 +35,18 @@ def model_from_params(params):
 def fw_constants_from_params(*params):
     keys = ["fw_a", "fw_b", "fw_c", "fw_d"]
     return {key: value for (key, value) in zip(keys, params)}
+
+
+def full_flat_params(params_dict, prefix=None):
+    indict = {}
+    for (key, value) in params_dict.items():
+        print(f"{key}, {value} for {prefix}")
+        if isinstance(value, dict):
+            indict.update(full_flat_params(value, key))
+        else:
+            indict[prefix + "_" + key if prefix is not None else key] = value
+    return indict
+
 
 
 class PC(str, Enum):
@@ -75,6 +89,8 @@ def predict_torque_default_curves(
     )
 
 
+# Predicts torque directly from _PARAMS. Doesn't work directly in the tuner because
+# it uses nested values in dict.
 def predict_torque_main(
         data,
         tq_max,
@@ -245,8 +261,7 @@ def tune_fw_all_log_constants_inner(trace_data,
 
     params.update(tuning)
 
-    # return predict_torque_main(
-    return predict_torque_expanded_params(
+    return predict_torque_main(
         trace_data,
         **params
     )
@@ -270,7 +285,7 @@ def predict_torque_voltage_log_constants(
         fw_a=fw_a, fw_b=fw_b, fw_c=fw_c, fw_d=fw_d)(frame)
 
 
-def curve_fit_torque(trace_data, fn=predict_torque_default_curves, guess=None):
+def curve_fit_torque(trace_data, fn=predict_torque_expanded_params, guess=None):
     if guess is None:
         guess = SRPLUS_TORQUE_MODEL_PARAMS.values()
 
