@@ -6,7 +6,7 @@ import models
 import predict_torque
 from displays import make_subplot_graph, show_figure
 from predict_torque import add_torque_prediction_trace
-from data import C, filter_pedal_application, read_files, Files
+from data import C, filter_pedal_application, read_files, Files, TorquePredictionFiles
 from stator_cooling import plot_stator_cooling
 
 register_plotly_resampler(mode='auto')
@@ -14,17 +14,18 @@ register_plotly_resampler(mode='auto')
 
 def main():
     print("Analyzing....")
-    model_files = [
-        Files.bw_23_1_8_S4_unthrottled,
-        Files.west_fast_unthrottled, Files.east_unthrottled, Files.th_1, Files.th_3, Files.th_5, Files.th_6]
+    # model_files = [
+    #     Files.bw_23_1_8_S4_unthrottled,
+    #     Files.west_fast_unthrottled, Files.east_unthrottled, Files.th_1, Files.th_3, Files.th_5, Files.th_6]
+    model_files = TorquePredictionFiles.all
 
     # fig = review_trace(Files.east_1)
     # show_figure(fig)
     # return
 
-    model = models.VOLTAGE_MODELLED_PARAMS_FW
+    # model = models.SRPLUS_TORQUE_MODEL_PARAMS
     # model = tune_all_params(files=files)
-    # model = tune_fw_log_constants(files=model_files)
+    model = tune_fw_log_constants(files=model_files)
     # model = tune_params(files=Files.th_all)
 
     print("Plotting....")
@@ -126,7 +127,7 @@ def plot_speed_vs_torque_and_power(model=None, files=Files.th_all):
 def modelled_torque_estimate():
     return lambda frame: models.predict_torque_onerow(
         frame,
-        **models.VOLTAGE_MODELLED_PARAMS_FW
+        **models.SRPLUS_TORQUE_MODEL_PARAMS
     )
 
 

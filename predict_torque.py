@@ -50,7 +50,7 @@ def add_torque_prediction(file):
 def add_torque_prediction_trace(trace_data):
     trace_data[C.PREDICTED_MAX_TORQUE] = models.predict_torque_main(
         trace_data,
-        **models.VOLTAGE_MODELLED_PARAMS_FW)
+        **models.SRPLUS_TORQUE_MODEL_PARAMS)
 
     def predict_inner(frame):
         pred = frame[C.PREDICTED_MAX_TORQUE]

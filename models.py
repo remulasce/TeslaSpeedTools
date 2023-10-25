@@ -9,7 +9,7 @@ from data import *
 
 
 # This should be the current best-fit, using hi/lo curves.
-VOLTAGE_MODELLED_PARAMS_FW = {
+SRPLUS_TORQUE_MODEL_PARAMS = {
     'tq_max': 469.125, 'tq_accelerator_a': 6.612412744169433,
     'cliff_speed': 65.99973045750038, 'cliff_v': 0.0003816897486626024,
     'fw_v_a': 0.011468594400665411, 'fw_accelerator_a': 1.6758878532006707,
@@ -26,7 +26,7 @@ LV_FW_CURVE = [-1.10960402, 0.45828758, 5.35433467, 55.45196733]
 
 
 def model_from_params(params):
-    keys = VOLTAGE_MODELLED_PARAMS_FW.keys()
+    keys = SRPLUS_TORQUE_MODEL_PARAMS.keys()
     return {key: value for (key, value) in zip(keys, params)}
 
 
@@ -53,7 +53,7 @@ def make_predictions(trace_data, guess=None):
 def predict_torque_default(data):
     data[C.PERCENT_TORQUE_CUT] = predict_torque_main(
         data,
-        **VOLTAGE_MODELLED_PARAMS_FW
+        **SRPLUS_TORQUE_MODEL_PARAMS
     )
 
 
@@ -202,14 +202,14 @@ def tune_voltage_logarithmic_constants(files):
     trace_data = data.filter_pedal_application(trace_data, pedal_min=95)
     trace_data = data.filter_over_cliff(trace_data)
 
-    guess_v_a = VOLTAGE_MODELLED_PARAMS_FW["fw_v_a"]
+    guess_v_a = SRPLUS_TORQUE_MODEL_PARAMS["fw_v_a"]
     guess_hi = HV_FW_CURVE
     guess_lo = LV_FW_CURVE
     guess = [guess_v_a, *guess_hi, *guess_lo]
 
     tuned_params = curve_fit_torque(trace_data, fn=tune_fw_all_log_constants_inner, guess=guess)
 
-    ret = VOLTAGE_MODELLED_PARAMS_FW.copy()
+    ret = SRPLUS_TORQUE_MODEL_PARAMS.copy()
 
     keys = ["fw_a", "fw_b", "fw_c", "fw_d"]
 
@@ -229,7 +229,7 @@ def tune_fw_all_log_constants_inner(trace_data,
     """
     Allows tuning of only fw constants.
     """
-    params = VOLTAGE_MODELLED_PARAMS.copy()
+    params = SRPLUS_TORQUE_MODEL_PARAMS.copy()
 
     tuning = {
         "fw_v_a": fw_v_a,
@@ -245,7 +245,8 @@ def tune_fw_all_log_constants_inner(trace_data,
 
     params.update(tuning)
 
-    return predict_torque_main(
+    # return predict_torque_main(
+    return predict_torque_expanded_params(
         trace_data,
         **params
     )
@@ -271,7 +272,7 @@ def predict_torque_voltage_log_constants(
 
 def curve_fit_torque(trace_data, fn=predict_torque_default_curves, guess=None):
     if guess is None:
-        guess = VOLTAGE_MODELLED_PARAMS_FW.values()
+        guess = SRPLUS_TORQUE_MODEL_PARAMS.values()
 
     trace_data = trace_data.sample(100)  # Maybe reconsider this
     all_frames = trace_data[[e.value for e in PC]].to_numpy().transpose()

@@ -16,5 +16,11 @@ This is partially just a dump of separate features. Major ones:
   * See functions in models.py
 
 
+## Tuning Torque Predictions
+Use `main.py` to invoke tests against `models.py`. `models.py` has the code to predict and tune predictions, and also 
+keeps the "main" prediction in `VOLTAGE_MODELLED_PARAMS_FW`.
+
+The loop is to   
+
 ## Development
 Suggest using Intellij PyCharm. There should be a Conda environment set up with the dependencies in there.

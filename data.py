@@ -1,4 +1,5 @@
 import glob
+import os
 from enum import Enum
 from pathlib import Path
 
@@ -84,6 +85,26 @@ class Files:
     bw_oil_S1 = Path("traces/Oil Cooler Test Day/Perf 2023-05-27 08-01-46.csv")
     bw_oil_SC = Path("traces/Oil Cooler Test Day/Perf 2023-05-27 11-21-59.csv")
     bw_oil_S5 = Path("traces/Oil Cooler Test Day/Perf 2023-05-27 15-23-14.csv")
+
+
+
+class TorquePredictionFiles:
+    pred_folder = Path("torque_prediction_traces")
+
+    def add_folder(self, filename):
+        return self.pred_folder + Path(filename)
+
+    all = []
+    for name in os.listdir(pred_folder):
+        all.append(pred_folder.joinpath(Path(name)))
+
+    # all = [Path("torque_prediction_traces/") + file for file in [
+    #     Files.bw_23_1_8_S4_unthrottled,
+    #     Files.west_fast_unthrottled, Files.east_unthrottled, Files.th_1, Files.th_3, Files.th_5, Files.th_6]
+    # ]
+    # ]
+
+
 
 
 colors_map = {
