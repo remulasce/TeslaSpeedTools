@@ -15,10 +15,19 @@ def main():
     print(f"Model files: {model_files}")
 
     print("Tuning params (check code for which parameters)")
-    model = tune_all_params(files=model_files)
+    # Either tune a model, or review one
+    # model = tune_all_params(files=model_files)
+    model = models.SRPLUS_TORQUE_MODEL_PARAMS
 
     print("Got updated model. Checking...")
-    validation_files = [TorquePredictionFiles.no_oil_cooler_fastlap, TorquePredictionFiles.oil_cooler_with_pump_overclocked]
+    validation_files = [TorquePredictionFiles.no_oil_cooler_fastlap,
+                        TorquePredictionFiles.oil_cooler_with_normal_pump,
+                        TorquePredictionFiles.oil_cooler_with_pump_overclocked
+                        ] + model_files
+    # validation_files = [TorquePredictionFiles.no_oil_cooler_fastlap,
+    #                     TorquePredictionFiles.oil_cooler_with_normal_pump,
+    #                     TorquePredictionFiles.oil_cooler_with_pump_overclocked
+    #                     ]
     fig = review_prediction_trace(model, files=validation_files)
     show_figure(fig)
     print("Done")
@@ -35,13 +44,14 @@ def tune_all_params(files):
 
 
 def review_prediction_trace(model, files):
-    titles = [str(file) for file in files for _ in range(2)]
+    titles = [str(file) for file in files for _ in range(1)]
     fig = subplots.make_subplots(rows=len(files), cols=1, shared_xaxes=True, shared_yaxes=True, subplot_titles=titles)
 
     for file, i in zip(files, range(1, len(files) + 1)):
         trace_data = read_files(file)
 
-        trace_data = filter_pedal_application(trace_data, pedal_min=75)
+        print("filtering out pedal under 95")
+        trace_data = filter_pedal_application(trace_data, pedal_min=95)
 
         # make_subplot_graph(fig, trace_data, x_axis=C.ACCELERATOR_PEDAL, y_axis="R torque", row=i, col=1, name=file)
         make_subplot_graph(fig, trace_data, x_axis=C.SPEED, y_axis=C.ACCELERATOR_PEDAL, row=i, col=1, color='gray')

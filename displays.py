@@ -47,7 +47,7 @@ def expected_power_from_throttle(local_data, axis,
     trend_x = local_data[axis]
     trend_y = local_data.apply(estimate_fun, axis=1)
 
-    return go.Scatter(
+    return go.Scattergl(
         x=trend_x, y=trend_y, name="prediction", mode="markers", marker={'color': 'red'}
     )
 

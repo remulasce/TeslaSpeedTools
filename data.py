@@ -99,6 +99,7 @@ class TorquePredictionFiles:
 
     no_oil_cooler_fastlap = Path("example_traces/no_oil_cooler_fastlap.csv")
     oil_cooler_with_pump_overclocked = Path("example_traces/oil_cooler_with_pump_overclocked.csv")
+    oil_cooler_with_normal_pump = Path("example_traces/oil_cooler_with_stock_pump.csv")
 
 
 colors_map = {
