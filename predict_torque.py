@@ -48,7 +48,7 @@ def add_torque_prediction(file):
 
 
 def add_torque_prediction_trace(trace_data):
-    trace_data[C.PREDICTED_MAX_TORQUE] = models.predict_torque_main(
+    trace_data[C.PREDICTED_MAX_TORQUE] = models.predict_torque_main_dict(
         trace_data,
         **models.SRPLUS_TORQUE_MODEL_PARAMS)
 

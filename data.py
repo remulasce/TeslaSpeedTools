@@ -87,7 +87,6 @@ class Files:
     bw_oil_S5 = Path("traces/Oil Cooler Test Day/Perf 2023-05-27 15-23-14.csv")
 
 
-
 class TorquePredictionFiles:
     pred_folder = Path("torque_prediction_traces")
 
@@ -98,13 +97,8 @@ class TorquePredictionFiles:
     for name in os.listdir(pred_folder):
         all.append(pred_folder.joinpath(Path(name)))
 
-    # all = [Path("torque_prediction_traces/") + file for file in [
-    #     Files.bw_23_1_8_S4_unthrottled,
-    #     Files.west_fast_unthrottled, Files.east_unthrottled, Files.th_1, Files.th_3, Files.th_5, Files.th_6]
-    # ]
-    # ]
-
-
+    no_oil_cooler_fastlap = Path("example_traces/no_oil_cooler_fastlap.csv")
+    oil_cooler_with_pump_overclocked = Path("example_traces/oil_cooler_with_pump_overclocked.csv")
 
 
 colors_map = {
@@ -153,7 +147,9 @@ def filter_under_cliff(trace_data):
 
 
 def filter_over_cliff(trace_data):
-    # Roughly matches the torque limited portion.
+    """
+    Removes most speeds where torque is limited to max, since it's always gunna be 469
+    """
     return trace_data[(trace_data[C.SPEED] > 66)]
 
 

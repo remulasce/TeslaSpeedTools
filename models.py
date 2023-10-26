@@ -1,4 +1,4 @@
-from pprint import pprint
+import inspect
 
 import numpy as np
 from pandas import DataFrame
@@ -7,7 +7,6 @@ from scipy.optimize import curve_fit
 import data
 from data import *
 
-
 # This should be the current best-fit, using hi/lo curves.
 SRPLUS_TORQUE_MODEL_PARAMS = {
     'tq_max': 469.125, 'tq_accelerator_a': 6.612412744169433,
@@ -15,10 +14,15 @@ SRPLUS_TORQUE_MODEL_PARAMS = {
     'fw_v_a': 0.011468594400665411, 'fw_accelerator_a': 1.6758878532006707,
     # Would be fw_a_hi, fw_b_hi
     'hi': {'fw_a': -896.3746078952913, 'fw_b': -7.586995411250427,
-                    'fw_c': -1862.9018403847551, 'fw_d': 32.42677224719758},
+           'fw_c': -1862.9018403847551, 'fw_d': 32.42677224719758},
     # Would be fw_a_lo, fw_b_lo
     'lo': {'fw_a': -1.1925343705085474, 'fw_b': 1.1119491977554612,
-                    'fw_c': 4.984857284976331, 'fw_d': 58.69134821315341}}
+           'fw_c': 4.984857284976331, 'fw_d': 58.69134821315341}}
+
+TESTING_PARAMS = {'tq_max': 469.125, 'tq_accelerator_a': 6.612402898684848, 'cliff_speed': 65.99948198831628,
+                  'cliff_v': 0.0004365310967417108, 'fw_v_a': 0.0031821562832662098,
+                  'fw_accelerator_a': 134.28248497551354,
+                  'hi': -1091.7364583280012, 'lo': -7.586995411250677}
 
 # So the fw_v_a didn't change, probably because it's not actually included/necessary. Mostly fw_b and fw_d.
 # We can get rid of it entirely if we have a whole different curve. OR rather, it should represent the proportion
@@ -27,8 +31,21 @@ HV_FW_CURVE = [-897.36050249, -7.58699632, -1862.4732444, 32.42677225]
 LV_FW_CURVE = [-1.10960402, 0.45828758, 5.35433467, 55.45196733]
 
 
-def model_from_params(params):
-    keys = SRPLUS_TORQUE_MODEL_PARAMS.keys()
+def model_from_params_list(params, pattern=SRPLUS_TORQUE_MODEL_PARAMS):
+    # print(f"{params}, {pattern}}")
+    indict = {}
+    for (key, value) in pattern.items():
+        if isinstance(value, dict):
+            indict[key] = (model_from_params_list(params, value))
+        else:
+            # print(f"orig key: {key}")
+            # print(f"{key}: {params[0]}")
+            indict[key] = params.pop(0)
+    return indict
+
+
+def flat_model_from_params(params):
+    keys = flat_dict(SRPLUS_TORQUE_MODEL_PARAMS).keys()
     return {key: value for (key, value) in zip(keys, params)}
 
 
@@ -37,15 +54,14 @@ def fw_constants_from_params(*params):
     return {key: value for (key, value) in zip(keys, params)}
 
 
-def full_flat_params(params_dict, suffix=None):
+def flat_dict(params_dict, suffix=None):
     indict = {}
     for (key, value) in params_dict.items():
         if isinstance(value, dict):
-            indict.update(full_flat_params(value, key))
+            indict.update(flat_dict(value, key))
         else:
             indict[key + "_" + suffix if suffix is not None else key] = value
     return indict
-
 
 
 class PC(str, Enum):
@@ -55,48 +71,15 @@ class PC(str, Enum):
     BATTERY_VOLTAGE = C.BATTERY_VOLTAGE.value,
 
 
-def make_predictions(trace_data, guess=None):
-    # all_frames = trace_data[[e.value for e in PC]].to_numpy().transpose()
-    params = curve_fit_torque(trace_data, guess=guess)
-    # parms = [470] + parms
-    model = model_from_params(params)
-    return model
-
-
-def predict_torque_default(data):
-    data[C.PERCENT_TORQUE_CUT] = predict_torque_main(
-        data,
-        **SRPLUS_TORQUE_MODEL_PARAMS
-    )
-
-
-# Adds HV and LV curves, if not present.
-def predict_torque_default_curves(
-        data,
-        tq_max,
-        tq_accelerator_a,
-        cliff_speed, cliff_v,
-        fw_v_a, fw_accelerator_a
-):
-    return predict_torque_main(
-        data,
-        tq_max,
-        tq_accelerator_a,
-        cliff_speed, cliff_v,
-        fw_v_a, fw_accelerator_a,
-        *HV_FW_CURVE, *LV_FW_CURVE
-    )
-
-
 # Predicts torque directly from _PARAMS. Doesn't work directly in the tuner because
 # it uses nested values in dict.
-def predict_torque_main(
+def predict_torque_main_dict(
         data,
         tq_max,
         tq_accelerator_a,
         cliff_speed, cliff_v,
         fw_v_a, fw_accelerator_a,
-        fw_curve_hi, fw_curve_lo,
+        hi, lo,
 
 ):
     """
@@ -105,43 +88,16 @@ def predict_torque_main(
 
     if not isinstance(data, DataFrame):
         data = DataFrame.from_records(data.T, columns=[e.value for e in PC])
-    return data.apply(lambda frame: predict_torque_onerow(
+    return data.apply(lambda frame: predict_torque_frame(
         frame,
         tq_accelerator_a=tq_accelerator_a, tq_max=tq_max,
         cliff_speed=cliff_speed, cliff_v=cliff_v,
         fw_v_a=fw_v_a, fw_accelerator_a=fw_accelerator_a,
-        fw_curve_hi=fw_curve_hi, fw_curve_lo=fw_curve_lo
+        hi=hi, lo=lo
     ), 1)
 
 
-def predict_torque_expanded_params(
-        data,
-        tq_max,
-        tq_accelerator_a,
-        cliff_speed, cliff_v,
-        fw_v_a, fw_accelerator_a,
-        fw_a_hi, fw_b_hi, fw_c_hi, fw_d_hi,
-        fw_a_lo, fw_b_lo, fw_c_lo, fw_d_lo,
-):
-    """
-    Expands all sub-params for tuning.
-
-        This function explicitly lists all known params for tuning.
-    fit_curve can read the params here so it knows how many to tune.
-    Only accepts pc-column DataFrames since we apply the column names here.
-    """
-    fw_curve_hi = fw_constants_from_params(fw_a_hi, fw_b_hi, fw_c_hi, fw_d_hi)
-    fw_curve_lo = fw_constants_from_params(fw_a_lo, fw_b_lo, fw_c_lo, fw_d_lo)
-
-    return predict_torque_main(data,
-                               tq_max,
-                               tq_accelerator_a,
-                               cliff_speed, cliff_v,
-                               fw_v_a, fw_accelerator_a,
-                               fw_curve_hi, fw_curve_lo)
-
-
-def predict_torque_onerow(frame, **kwargs):
+def predict_torque_frame(frame, **kwargs):
     """ Lines up the various inner-methods for each row's prediction"""
     return split_torque_cliff(
         frame,
@@ -185,14 +141,14 @@ def predict_field_weakening_max_torque_split(**kwargs):
     return lambda f: predict_fw_max_split_inner(f, **kwargs)
 
 
-def predict_fw_max_split_inner(f, fw_v_a, fw_curve_hi, fw_curve_lo, **_):
+def predict_fw_max_split_inner(f, fw_v_a, hi, lo, **_):
     fw_v_a = voltage_coefficient(f[C.BATTERY_VOLTAGE], fw_v_a)
     # fw_v_a = 0
     lv = fw_v_a
     hv = 1 - fw_v_a
 
-    return lv * predict_field_weakening_max_tq(**fw_curve_lo)(f) + \
-           hv * predict_field_weakening_max_tq(**fw_curve_hi)(f)
+    return lv * predict_field_weakening_max_tq(**lo)(f) + \
+           hv * predict_field_weakening_max_tq(**hi)(f)
 
 
 # y = a log (b(x-d)) + c
@@ -209,31 +165,54 @@ def voltage_coefficient(voltage, fw_v_a):
     return (nominal_v - fw_v_a * voltage) / nominal_v
 
 
-def tune_voltage_logarithmic_constants(files):
+# Tuning methods:
+# Subsets of tune_extended_params to allow fine-tuning of specific traces only.
+
+def tune_all_params(
+        data,
+        tq_max,
+        tq_accelerator_a,
+        cliff_speed, cliff_v,
+        fw_v_a, fw_accelerator_a,
+        fw_a_hi, fw_b_hi, fw_c_hi, fw_d_hi,
+        fw_a_lo, fw_b_lo, fw_c_lo, fw_d_lo,
+):
     """
-    Model fw log constants based on these files. Prints and returns the result.
+    Expands all sub-params for tuning.
+
+        This function explicitly lists all known params for tuning.
+    fit_curve can read the params here so it knows how many to tune.
+    Only accepts pc-column DataFrames since we apply the column names here.
+
+    Naturally, this is extremely slow. You should prefer tuning individual constants with sub-methods.
     """
-    trace_data = read_files(files)
-    trace_data = data.filter_pedal_application(trace_data, pedal_min=95)
-    trace_data = data.filter_over_cliff(trace_data)
+    hi = fw_constants_from_params(fw_a_hi, fw_b_hi, fw_c_hi, fw_d_hi)
+    lo = fw_constants_from_params(fw_a_lo, fw_b_lo, fw_c_lo, fw_d_lo)
 
-    guess_v_a = SRPLUS_TORQUE_MODEL_PARAMS["fw_v_a"]
-    guess_hi = HV_FW_CURVE
-    guess_lo = LV_FW_CURVE
-    guess = [guess_v_a, *guess_hi, *guess_lo]
+    return predict_torque_main_dict(data,
+                                    tq_max,
+                                    tq_accelerator_a,
+                                    cliff_speed, cliff_v,
+                                    fw_v_a, fw_accelerator_a,
+                                    hi, lo)
 
-    tuned_params = curve_fit_torque(trace_data, fn=tune_fw_all_log_constants_inner, guess=guess)
 
-    ret = SRPLUS_TORQUE_MODEL_PARAMS.copy()
+def tune_tqmax(data, tq_max):
+    """
+    Tunes just the tq_max for quicker development of the tuning stack.
+    It should always be 470nm basically.
+    """
+    tuning = {
+        "tq_max": tq_max
+    }
 
-    keys = ["fw_a", "fw_b", "fw_c", "fw_d"]
+    params = flat_dict(SRPLUS_TORQUE_MODEL_PARAMS)
+    params.update(tuning)
 
-    ret["fw_v_a"] = tuned_params[0]
-    ret["fw_curve_hi"] = {key: val for key, val in zip(keys, tuned_params[1:5])}
-    ret["fw_curve_lo"] = {key: val for key, val in zip(keys, tuned_params[5:9])}
-
-    print("Tuned full dict: " + str(ret))
-    return ret
+    return tune_all_params(
+        data,
+        **params
+    )
 
 
 def tune_fw_all_log_constants_inner(trace_data,
@@ -260,35 +239,32 @@ def tune_fw_all_log_constants_inner(trace_data,
 
     params.update(tuning)
 
-    return predict_torque_main(
+    return predict_torque_main_dict(
         trace_data,
         **params
     )
 
 
-def tune_fw_log_constants_inner(trace_data, fw_a, fw_b, fw_c, fw_d):
-    if not isinstance(trace_data, DataFrame):
-        trace_data = DataFrame.from_records(trace_data.T, columns=[e.value for e in PC])
-
-    return trace_data.apply(lambda frame: predict_torque_voltage_log_constants(
-        frame, fw_a, fw_b, fw_c, fw_d), 1)
-
-
-def predict_torque_voltage_log_constants(
-        frame,
-        fw_a, fw_b, fw_c, fw_d):
+def curve_fit_torque(trace_data, fn=tune_all_params, guess=None):
     """
-    Predicts torque using the field-weakening curve alone
+    P
+    :param trace_data:
+    :param fn:
+    :param guess:
+    :return:
     """
-    return predict_field_weakening_max_tq(
-        fw_a=fw_a, fw_b=fw_b, fw_c=fw_c, fw_d=fw_d)(frame)
-
-
-def curve_fit_torque(trace_data, fn=predict_torque_expanded_params, guess=None):
     if guess is None:
         guess = SRPLUS_TORQUE_MODEL_PARAMS
-    if isinstance(guess, dict):
-        guess = list(full_flat_params(guess).values())
+    assert isinstance(guess, dict)
+
+    flat_params = flat_dict(guess)
+    fn_arg_names = inspect.getfullargspec(fn).args[1:]  # exempt the data param
+    # Figure out which args are actually being tuned by this function. Tuning the full_expanded_params model
+    # takes a long time, so the idea is you define a method which takes in only the parameters you want to tune.
+    # That arg will call the full model using default parameters for the non-provided ones. Here, if a guess
+    # isn't provided, we need to cut the default guess down to just the one that makes sense for the partial
+    # model. So pull the params.
+    guess = [flat_params[key] for key in fn_arg_names]
 
     trace_data = trace_data.sample(100)  # Maybe reconsider this
     all_frames = trace_data[[e.value for e in PC]].to_numpy().transpose()
@@ -298,19 +274,18 @@ def curve_fit_torque(trace_data, fn=predict_torque_expanded_params, guess=None):
     # loss = 'cauchy', maxfev=
     popt = curve_fit(fn, all_frames, actual_torques, p0=guess, maxfev=100000, method='trf', loss='cauchy')
 
-    print("Analysis results: " + str(popt[0]))
-    print("dict form: " + str(model_from_params(popt[0])))
+    print("Analysis results raw: " + str(popt[0]))
 
-    return popt[0]
+    params_list = list(popt[0])
+    filled_flat_dict = flat_dict(SRPLUS_TORQUE_MODEL_PARAMS)
+    filled_flat_dict.update(zip(fn_arg_names, params_list))
+    model = model_from_params_list(list(filled_flat_dict.values()))
+
+    print("dict form: " + str(model))
+
+    return model
 
 
 if __name__ == '__main__':
-    print("Running models alone...")
-    print("Combined tune")
-    # tune_split_v_a([Files.th_1, Files.th_2, Files.th_6, Files.th_7])
-
-    print("High-voltage tune")
-    tune_voltage_logarithmic_constants([Files.th_1])
-    # print("Low-voltage tune")
-    # tune_full_fw_voltage_effect([Files.th_6, Files.th_7])
+    print("Models.py doesn't do anything on its own. Use tune_torque_preduction.py")
     print("Done.")
