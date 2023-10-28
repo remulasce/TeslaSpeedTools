@@ -2,10 +2,10 @@ import plotly.express as px
 import plotly.subplots as subplots
 from plotly_resampler import register_plotly_resampler, FigureResampler
 
-import models
+import torque_prediction_model
 import predict_torque
 from displays import make_subplot_graph, show_figure
-from models import curve_fit_torque
+from torque_prediction_model import curve_fit_torque
 from predict_torque import add_torque_prediction_trace
 from data import C, filter_pedal_application, read_files, Files, TorquePredictionFiles
 
@@ -84,9 +84,9 @@ def review_single_trace(file):
 
 
 def modelled_torque_estimate():
-    return lambda frame: models.predict_torque_frame(
+    return lambda frame: torque_prediction_model.predict_torque_frame(
         frame,
-        **models.SRPLUS_TORQUE_MODEL_PARAMS
+        **torque_prediction_model.SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION
     )
 
 

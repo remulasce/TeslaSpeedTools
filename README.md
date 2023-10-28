@@ -13,7 +13,8 @@ This is partially just a dump of separate features. Major ones:
   * Automatically added to dash_test.py analysis
   * Add predictions to a standalone .csv file adding the trace to predict_in folder and using shortcuts therein.
 * Produce the torque predictions
-  * See functions in models.py
+  * See `tune_torque_prediction.py` for this workflow
+  * The model itself is in `torque_prediction_model.py`
 
 
 ## Tuning Torque Predictions
@@ -24,3 +25,8 @@ The loop is to
 
 ## Development
 Suggest using Intellij PyCharm. There should be a Conda environment set up with the dependencies in there.
+
+
+### Display Server
+The project uses Plotly and Plotly Dash. Originally, plain Plotly was used, eg. in the analyze_session and tune_torque files.
+Plotly Dash is used for a more full-featured experience, eg. drag and drop files.

@@ -15,7 +15,7 @@ from statsmodels.nonparametric.smoothers_lowess import lowess
 
 from data import C
 import data
-import models
+import torque_prediction_model
 
 
 def main():
@@ -48,9 +48,9 @@ def add_torque_prediction(file):
 
 
 def add_torque_prediction_trace(trace_data):
-    trace_data[C.PREDICTED_MAX_TORQUE] = models.predict_torque_main_dict(
+    trace_data[C.PREDICTED_MAX_TORQUE] = torque_prediction_model.predict_torque_main_dict(
         trace_data,
-        **models.SRPLUS_TORQUE_MODEL_PARAMS)
+        **torque_prediction_model.SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION)
 
     def predict_inner(frame):
         pred = frame[C.PREDICTED_MAX_TORQUE]
