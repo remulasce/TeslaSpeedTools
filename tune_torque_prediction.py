@@ -103,8 +103,6 @@ def tune_all_params(
                                     hi, lo)
 
 
-
-
 def tune_tqmax(data, tq_max):
     """
     Tunes just the tq_max for quicker development of the tuning stack.

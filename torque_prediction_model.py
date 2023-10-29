@@ -64,21 +64,20 @@ class TorquePredictionModel(dict):
 
 # As presented in https://www.youtube.com/watch?v=Vzss8orfwi0
 SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION = TorquePredictionModel({
-        'tq_max': 469.125,
-        'tq_accelerator_a': 6.612412744169433,
-        # TODO: Torque-limit should just be a constant applied on top of the curve output. No need to _also_ model the speed
-        'cliff_speed': 65.99973045750038, 'cliff_v': 0.0003816897486626024,
-        # Field weakening curve definition. Field weakening torque is heavily dependent on battery voltage. It's modelled
-        # here as a linear interpolation between a 'hi' and 'lo' voltage curve. fw_v_a defines the blend somehow
-        'fw_v_a': 0.011468594400665411,
-        'hi': {'fw_a': -896.3746078952913, 'fw_b': -7.586995411250427,
-               'fw_c': -1862.9018403847551, 'fw_d': 32.42677224719758},
-        'lo': {'fw_a': -1.1925343705085474, 'fw_b': 1.1119491977554612,
-               'fw_c': 4.984857284976331, 'fw_d': 58.69134821315341},
-        # Tries to derate for accelerator position. Doesn't really work.
-        'fw_accelerator_a': 1.6758878532006707,
-    })
-
+    'tq_max': 469.125,
+    'tq_accelerator_a': 6.612412744169433,
+    # TODO: Torque-limit should just be a constant applied on top of the curve output. No need to _also_ model the speed
+    'cliff_speed': 65.99973045750038, 'cliff_v': 0.0003816897486626024,
+    # Field weakening curve definition. Field weakening torque is heavily dependent on battery voltage. It's modelled
+    # here as a linear interpolation between a 'hi' and 'lo' voltage curve. fw_v_a defines the blend somehow
+    'fw_v_a': 0.011468594400665411,
+    'hi': {'fw_a': -896.3746078952913, 'fw_b': -7.586995411250427,
+           'fw_c': -1862.9018403847551, 'fw_d': 32.42677224719758},
+    'lo': {'fw_a': -1.1925343705085474, 'fw_b': 1.1119491977554612,
+           'fw_c': 4.984857284976331, 'fw_d': 58.69134821315341},
+    # Tries to derate for accelerator position. Doesn't really work.
+    'fw_accelerator_a': 1.6758878532006707,
+})
 
 
 class PC(str, Enum):
@@ -90,8 +89,6 @@ class PC(str, Enum):
     ACCELERATOR_PEDAL = C.ACCELERATOR_PEDAL.value,
     SPEED = C.SPEED.value,
     BATTERY_VOLTAGE = C.BATTERY_VOLTAGE.value,
-
-
 
 
 # Predicts torque directly from _PARAMS. Doesn't work directly in the tuner because
