@@ -97,9 +97,16 @@ class TorquePredictionFiles:
     for name in os.listdir(pred_folder):
         all.append(pred_folder.joinpath(Path(name)))
 
+    th_1 = Path("torque_prediction_traces/Perf 2022-12-13 00-14-47.csv")  # high volt test
+    th_3 = Path("torque_prediction_traces/Perf 2022-12-13 00-32-50.csv")
+    th_5 = Path("torque_prediction_traces/Perf 2022-12-13 00-48-39.csv")
+    th_6 = Path("torque_prediction_traces/Perf 2022-12-13 01-04-54.csv")  # low volt test
+
     no_oil_cooler_fastlap = Path("example_traces/no_oil_cooler_fastlap.csv")
     oil_cooler_with_pump_overclocked = Path("example_traces/oil_cooler_with_pump_overclocked.csv")
     oil_cooler_with_normal_pump = Path("example_traces/oil_cooler_with_stock_pump.csv")
+
+    training_set = [th_1, th_3, th_5, th_6, no_oil_cooler_fastlap]
 
 
 colors_map = {
@@ -154,6 +161,13 @@ def filter_over_cliff(trace_data):
     return trace_data[(trace_data[C.SPEED] > 66)]
 
 
+def filter_over_speed(trace_data, speed):
+    """
+    More generic named filter. Useful to get out the drive from the paddock to the hotpit.
+    """
+    return trace_data[(trace_data[C.SPEED] > speed)]
+
+
 def filter_pedal_application(trace_data, pedal_min=75, pedal_max=100):
     return trace_data[
         (trace_data["Accelerator Pedal"] >= pedal_min) &
@@ -198,7 +212,7 @@ def read_files(files, clean=True, interpolate=True):
     merge_time(trace_data)
 
     if interpolate:
-        trace_data.interpolate(inplace=True)
+        trace_data.interpolate(inplace=True, limit_direction='both', method='linear')
         assert not trace_data.isnull().values.any()
 
     return trace_data

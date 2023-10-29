@@ -12,9 +12,6 @@ class TorquePredictionModel(dict):
     example_dict = {
         'tq_max': 469.125,
         'tq_accelerator_a': 6.612412744169433,
-        # TODO: Torque-limit should just be a constant applied on top of the curve output. No need to _also_ model
-        #  the speed
-        'cliff_speed': 65.99973045750038, 'cliff_v': 0.0003816897486626024,
         # Field weakening curve definition. Field weakening torque is heavily dependent on battery voltage. It's
         # modelled here as a linear interpolation between a 'hi' and 'lo' voltage curve. fw_v_a defines the blend
         # somehow
@@ -62,20 +59,16 @@ class TorquePredictionModel(dict):
         return indict
 
 
-# Simplified/improved since then.
-SRPLUS_TORQUE_MODEL_PARAMS = TorquePredictionModel({
-    'tq_max': 469.125,
-    'tq_accelerator_a': 6.612412744169433,
-    # Field weakening curve definition. Field weakening torque is heavily dependent on battery voltage. It's modelled
-    # here as a linear interpolation between a 'hi' and 'lo' voltage curve. fw_v_a defines the blend somehow
-    'fw_v_a': 0.011468594400665411,
-    'hi': {'fw_a': -896.3746078952913, 'fw_b': -7.586995411250427,
-           'fw_c': -1862.9018403847551, 'fw_d': 32.42677224719758},
-    'lo': {'fw_a': -1.1925343705085474, 'fw_b': 1.1119491977554612,
-           'fw_c': 4.984857284976331, 'fw_d': 58.69134821315341},
-    # Tries to derate for accelerator position. Doesn't really work.
-    'fw_accelerator_a': 1.6758878532006707,
-})
+# Simplified/improved without explicit torque cliff. Still not perfect.
+# Based on     training_set = [th_1, th_3, th_5, th_6, no_oil_cooler_fastlap]. It seems some of these aren't compatible
+# really.
+SRPLUS_TORQUE_MODEL_PARAMS = TorquePredictionModel(
+    {'tq_max': 470.23825994385976, 'tq_accelerator_a': 6.612412744169433, 'fw_v_a': 0.01269308238279221,
+     'hi': {'fw_a': -903.2139178114219, 'fw_b': -7.586995752266236, 'fw_c': -1859.9319144396932,
+            'fw_d': 32.42677224682448},
+     'lo': {'fw_a': -1.0879315266950822, 'fw_b': 1.5855009105173516, 'fw_c': 4.445505561635066,
+            'fw_d': 61.62181080585337}, 'fw_accelerator_a': 1.617242764918341
+     })
 
 # As presented in https://www.youtube.com/watch?v=Vzss8orfwi0
 SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION = TorquePredictionModel({
@@ -112,7 +105,6 @@ def predict_torque_main_dict(
         data,
         tq_max,
         tq_accelerator_a,
-        cliff_speed, cliff_v,
         fw_v_a, fw_accelerator_a,
         hi, lo
 ):
@@ -125,7 +117,6 @@ def predict_torque_main_dict(
     return data.apply(lambda frame: predict_torque_frame(
         frame,
         tq_accelerator_a=tq_accelerator_a, tq_max=tq_max,
-        cliff_speed=cliff_speed, cliff_v=cliff_v,
         fw_v_a=fw_v_a, fw_accelerator_a=fw_accelerator_a,
         hi=hi, lo=lo
     ), 1)
@@ -143,7 +134,7 @@ def predict_torque_frame(frame, **kwargs):
 
 
 def split_torque_cliff(frame,
-                       torque_limited_curve, field_weakening_curve, cliff_speed, cliff_v, **_):
+                       torque_limited_curve, field_weakening_curve, **_):
     """
     Torque is limited either by the field-weakening characteristics with falloff due to speed and voltage, or the
     fixed inverter amperage limit when at lower speeds.

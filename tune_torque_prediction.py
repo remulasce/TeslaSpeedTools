@@ -15,12 +15,12 @@ register_plotly_resampler(mode='auto')
 def main():
     print("Tuning torque prediction model....")
 
-    model_files = TorquePredictionFiles.all
-    print(f"Model files: {model_files}")
+    training_set = TorquePredictionFiles.training_set
+    print(f"Model files: {training_set}")
 
     print("Tuning params (check code for which parameters)")
     # Either tune a model, or review one
-    model = train_all_params(files=model_files)
+    model = train_params(files=training_set)
     # model = torque_prediction_model.SRPLUS_TORQUE_MODEL_PARAMS
 
     print("Got updated model. Checking...")
@@ -36,14 +36,15 @@ def main():
     print("Done")
 
 
-def train_all_params(files):
+def train_params(files):
     trace_data = read_files(files)
     print("Training: Filtering out pedal under 75%")
     trace_data = filter_pedal_application(trace_data, pedal_min=75, pedal_max=100)
     print("Training: Filtering out speeds under field weakening")
-    trace_data = filter_over_cliff(trace_data)
+    # trace_data = filter_over_cliff(trace_data)
+    trace_data = filter_over_speed(trace_data, 30)
 
-    return curve_fit_torque(trace_data, fn=tune_tqmax, guess=None)
+    return curve_fit_torque(trace_data, fn=tune_all_params, guess=None)
 
 
 def review_prediction_trace(model, files):
@@ -72,7 +73,6 @@ def tune_all_params(
         data,
         tq_max,
         tq_accelerator_a,
-        cliff_speed, cliff_v,
         fw_v_a, fw_accelerator_a,
         fw_a_hi, fw_b_hi, fw_c_hi, fw_d_hi,
         fw_a_lo, fw_b_lo, fw_c_lo, fw_d_lo,
@@ -96,7 +96,6 @@ def tune_all_params(
     return predict_torque_main_dict(data,
                                     tq_max,
                                     tq_accelerator_a,
-                                    cliff_speed, cliff_v,
                                     fw_v_a, fw_accelerator_a,
                                     hi, lo)
 
