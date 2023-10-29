@@ -79,6 +79,10 @@ def tune_all_params(
         fw_a_hi, fw_b_hi, fw_c_hi, fw_d_hi,
         fw_a_lo, fw_b_lo, fw_c_lo, fw_d_lo,
 ):
+    def fw_constants_from_params(*params):
+        keys = ["fw_a", "fw_b", "fw_c", "fw_d"]
+        return {key: value for (key, value) in zip(keys, params)}
+
     """
     Expands all sub-params for tuning.
 
@@ -99,6 +103,8 @@ def tune_all_params(
                                     hi, lo)
 
 
+
+
 def tune_tqmax(data, tq_max):
     """
     Tunes just the tq_max for quicker development of the tuning stack.
@@ -108,7 +114,7 @@ def tune_tqmax(data, tq_max):
         "tq_max": tq_max
     }
 
-    params = flat_dict(SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION)
+    params = TorquePredictionModel.model_to_flat_dict(SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION)
     params.update(tuning)
 
     return tune_all_params(
@@ -159,7 +165,7 @@ def curve_fit_torque(trace_data, fn=tune_all_params, guess=None):
         guess = torque_prediction_model.SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION
     assert isinstance(guess, dict)
 
-    flat_params = torque_prediction_model.flat_dict(guess)
+    flat_params = TorquePredictionModel.model_to_flat_dict(guess)
     fn_arg_names = inspect.getfullargspec(fn).args[1:]  # exempt the data param
     # Figure out which args are actually being tuned by this function. Tuning the full_expanded_params model
     # takes a long time, so the idea is you define a method which takes in only the parameters you want to tune.
@@ -179,10 +185,10 @@ def curve_fit_torque(trace_data, fn=tune_all_params, guess=None):
     print("Analysis results raw: " + str(popt[0]))
 
     params_list = list(popt[0])
-    filled_flat_dict = torque_prediction_model.flat_dict(
+    filled_flat_dict = TorquePredictionModel.model_to_flat_dict(
         torque_prediction_model.SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION)
     filled_flat_dict.update(zip(fn_arg_names, params_list))
-    model = torque_prediction_model.model_from_params_list(list(filled_flat_dict.values()))
+    model = TorquePredictionModel.from_params_list(list(filled_flat_dict.values()))
 
     print("dict form: " + str(model))
 

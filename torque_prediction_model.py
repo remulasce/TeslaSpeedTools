@@ -1,3 +1,4 @@
+from __future__ import annotations
 import numpy as np
 from pandas import DataFrame
 
@@ -5,25 +6,79 @@ from data import *
 
 
 class TorquePredictionModel(dict):
-    pass
+    """
+    Add a little bit of sanity to this dict stuff
+    """
+    example_dict = {
+        'tq_max': 469.125,
+        'tq_accelerator_a': 6.612412744169433,
+        # TODO: Torque-limit should just be a constant applied on top of the curve output. No need to _also_ model
+        #  the speed
+        'cliff_speed': 65.99973045750038, 'cliff_v': 0.0003816897486626024,
+        # Field weakening curve definition. Field weakening torque is heavily dependent on battery voltage. It's
+        # modelled here as a linear interpolation between a 'hi' and 'lo' voltage curve. fw_v_a defines the blend
+        # somehow
+        'fw_v_a': 0.011468594400665411,
+        'hi': {'fw_a': -896.3746078952913, 'fw_b': -7.586995411250427,
+               'fw_c': -1862.9018403847551, 'fw_d': 32.42677224719758},
+        'lo': {'fw_a': -1.1925343705085474, 'fw_b': 1.1119491977554612,
+               'fw_c': 4.984857284976331, 'fw_d': 58.69134821315341},
+        # Tries to derate for accelerator position. Doesn't really work.
+        'fw_accelerator_a': 1.6758878532006707,
+    }
+
+    @staticmethod
+    def from_params_list(params: list, pattern: dict = example_dict) -> TorquePredictionModel:
+        """
+        Constructs a TorquePredictionModel from a flat list of individual params, which must have the same count
+        as the number of recursed params in the pattern.
+        """
+        indict = {}
+        for (key, value) in pattern.items():
+            if isinstance(value, dict):
+                indict[key] = TorquePredictionModel.from_params_list(params, value)
+            else:
+                indict[key] = params.pop(0)
+        return TorquePredictionModel(indict)
+
+    @staticmethod
+    def flat_dict_from_params(params: list) -> dict:
+        keys = params.model_to_flat_dict(SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION).keys()
+        return {key: value for (key, value) in zip(keys, params)}
+
+    @staticmethod
+    def model_to_flat_dict(model: TorquePredictionModel, suffix=None):
+        """
+        Converts a nested dict (human-readable-ish) of params into a flat one.
+        :param model:
+        :param suffix: For recursion only, just provide None.
+        """
+        indict = {}
+        for (key, value) in model.items():
+            if isinstance(value, dict):
+                indict.update(model.model_to_flat_dict(value, key))
+            else:
+                indict[key + "_" + suffix if suffix is not None else key] = value
+        return indict
 
 
 # As presented in https://www.youtube.com/watch?v=Vzss8orfwi0
 SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION = TorquePredictionModel({
-    'tq_max': 469.125,
-    'tq_accelerator_a': 6.612412744169433,
-    # TODO: Torque-limit should just be a constant applied on top of the curve output. No need to _also_ model the speed
-    'cliff_speed': 65.99973045750038, 'cliff_v': 0.0003816897486626024,
-    # Field weakening curve definition. Field weakening torque is heavily dependent on battery voltage. It's modelled
-    # here as a linear interpolation between a 'hi' and 'lo' voltage curve. fw_v_a defines the blend somehow
-    'fw_v_a': 0.011468594400665411,
-    'hi': {'fw_a': -896.3746078952913, 'fw_b': -7.586995411250427,
-           'fw_c': -1862.9018403847551, 'fw_d': 32.42677224719758},
-    'lo': {'fw_a': -1.1925343705085474, 'fw_b': 1.1119491977554612,
-           'fw_c': 4.984857284976331, 'fw_d': 58.69134821315341},
-    # Tries to derate for accelerator position. Doesn't really work.
-    'fw_accelerator_a': 1.6758878532006707,
-})
+        'tq_max': 469.125,
+        'tq_accelerator_a': 6.612412744169433,
+        # TODO: Torque-limit should just be a constant applied on top of the curve output. No need to _also_ model the speed
+        'cliff_speed': 65.99973045750038, 'cliff_v': 0.0003816897486626024,
+        # Field weakening curve definition. Field weakening torque is heavily dependent on battery voltage. It's modelled
+        # here as a linear interpolation between a 'hi' and 'lo' voltage curve. fw_v_a defines the blend somehow
+        'fw_v_a': 0.011468594400665411,
+        'hi': {'fw_a': -896.3746078952913, 'fw_b': -7.586995411250427,
+               'fw_c': -1862.9018403847551, 'fw_d': 32.42677224719758},
+        'lo': {'fw_a': -1.1925343705085474, 'fw_b': 1.1119491977554612,
+               'fw_c': 4.984857284976331, 'fw_d': 58.69134821315341},
+        # Tries to derate for accelerator position. Doesn't really work.
+        'fw_accelerator_a': 1.6758878532006707,
+    })
+
 
 
 class PC(str, Enum):
@@ -37,39 +92,6 @@ class PC(str, Enum):
     BATTERY_VOLTAGE = C.BATTERY_VOLTAGE.value,
 
 
-def model_from_params_list(params: list, pattern: dict = SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION):
-    indict = {}
-    for (key, value) in pattern.items():
-        if isinstance(value, dict):
-            indict[key] = (model_from_params_list(params, value))
-        else:
-            indict[key] = params.pop(0)
-    return indict
-
-
-def flat_model_from_params(params):
-    keys = flat_dict(SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION).keys()
-    return {key: value for (key, value) in zip(keys, params)}
-
-
-def fw_constants_from_params(*params):
-    keys = ["fw_a", "fw_b", "fw_c", "fw_d"]
-    return {key: value for (key, value) in zip(keys, params)}
-
-
-def flat_dict(params_dict, suffix=None):
-    """
-    Converts a nested dict (human-readable-ish) of params into a flat one.
-    :param params_dict:
-    :param suffix: For recursion only, just provide None.
-    """
-    indict = {}
-    for (key, value) in params_dict.items():
-        if isinstance(value, dict):
-            indict.update(flat_dict(value, key))
-        else:
-            indict[key + "_" + suffix if suffix is not None else key] = value
-    return indict
 
 
 # Predicts torque directly from _PARAMS. Doesn't work directly in the tuner because
