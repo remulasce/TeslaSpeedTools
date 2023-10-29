@@ -50,7 +50,7 @@ def add_torque_prediction(file):
 def add_torque_prediction_trace(trace_data):
     trace_data[C.PREDICTED_MAX_TORQUE] = torque_prediction_model.predict_torque_main_dict(
         trace_data,
-        **torque_prediction_model.SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION)
+        **torque_prediction_model.SRPLUS_TORQUE_MODEL_PARAMS)
 
     def predict_inner(frame):
         pred = frame[C.PREDICTED_MAX_TORQUE]

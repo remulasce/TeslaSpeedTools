@@ -7,7 +7,7 @@ from scipy.optimize import curve_fit
 import torque_prediction_model
 from displays import show_figure, make_subplot_graph
 from torque_prediction_model import *
-from torque_prediction_model import SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION
+from torque_prediction_model import SRPLUS_TORQUE_MODEL_PARAMS
 
 register_plotly_resampler(mode='auto')
 
@@ -24,14 +24,12 @@ def main():
     # model = torque_prediction_model.SRPLUS_TORQUE_MODEL_PARAMS
 
     print("Got updated model. Checking...")
-    validation_files = [TorquePredictionFiles.no_oil_cooler_fastlap,
-                        TorquePredictionFiles.oil_cooler_with_normal_pump,
-                        TorquePredictionFiles.oil_cooler_with_pump_overclocked
-                        ] + model_files
-    # validation_files = [TorquePredictionFiles.no_oil_cooler_fastlap,
-    #                     TorquePredictionFiles.oil_cooler_with_normal_pump,
-    #                     TorquePredictionFiles.oil_cooler_with_pump_overclocked
-    #                     ]
+    validation_files = []
+    validation_files.extend(TorquePredictionFiles.all)
+    # validation_files.extend([TorquePredictionFiles.no_oil_cooler_fastlap,
+    #                          TorquePredictionFiles.oil_cooler_with_normal_pump,
+    #                          TorquePredictionFiles.oil_cooler_with_pump_overclocked
+    #                          ])
     fig = review_prediction_trace(model, files=validation_files)
     print("Displaying")
     show_figure(fig)
@@ -112,7 +110,7 @@ def tune_tqmax(data, tq_max):
         "tq_max": tq_max
     }
 
-    params = TorquePredictionModel.model_to_flat_dict(SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION)
+    params = TorquePredictionModel.model_to_flat_dict(SRPLUS_TORQUE_MODEL_PARAMS)
     params.update(tuning)
 
     return tune_all_params(
@@ -129,7 +127,7 @@ def tune_fw_all_log_constants_inner(trace_data,
     """
     Allows tuning of only fw constants.
     """
-    params = SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION.copy()
+    params = SRPLUS_TORQUE_MODEL_PARAMS.copy()
 
     tuning = {
         "fw_v_a": fw_v_a,
@@ -160,7 +158,7 @@ def curve_fit_torque(trace_data, fn=tune_all_params, guess=None):
     :return:
     """
     if guess is None:
-        guess = torque_prediction_model.SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION
+        guess = torque_prediction_model.SRPLUS_TORQUE_MODEL_PARAMS
     assert isinstance(guess, dict)
 
     flat_params = TorquePredictionModel.model_to_flat_dict(guess)
@@ -184,7 +182,7 @@ def curve_fit_torque(trace_data, fn=tune_all_params, guess=None):
 
     params_list = list(popt[0])
     filled_flat_dict = TorquePredictionModel.model_to_flat_dict(
-        torque_prediction_model.SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION)
+        torque_prediction_model.SRPLUS_TORQUE_MODEL_PARAMS)
     filled_flat_dict.update(zip(fn_arg_names, params_list))
     model = TorquePredictionModel.from_params_list(list(filled_flat_dict.values()))
 

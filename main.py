@@ -86,7 +86,7 @@ def review_single_trace(file):
 def modelled_torque_estimate():
     return lambda frame: torque_prediction_model.predict_torque_frame(
         frame,
-        **torque_prediction_model.SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION
+        **torque_prediction_model.SRPLUS_TORQUE_MODEL_PARAMS
     )
 
 
