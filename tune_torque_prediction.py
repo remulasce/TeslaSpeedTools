@@ -4,6 +4,7 @@ from plotly import subplots
 from plotly_resampler import register_plotly_resampler
 from scipy.optimize import curve_fit
 
+import displays
 import torque_prediction_model
 from displays import show_figure, make_subplot_graph
 from torque_prediction_model import *
@@ -20,8 +21,11 @@ def main():
 
     print("Tuning params (check code for which parameters)")
     # Either tune a model, or review one
-    model = train_params(files=training_set)
-    # model = torque_prediction_model.SRPLUS_TORQUE_MODEL_PARAMS
+    # model = train_params(files=training_set)
+    model = torque_prediction_model.SRPLUS_TORQUE_MODEL_PARAMS
+
+    baseline_model = None
+    # baseline_model = torque_prediction_model.SRPLUS_TORQUE_MODEL_PARAMS_VIDEO_VERSION
 
     print("Got updated model. Checking...")
     validation_files = []
@@ -30,7 +34,7 @@ def main():
     #                          TorquePredictionFiles.oil_cooler_with_normal_pump,
     #                          TorquePredictionFiles.oil_cooler_with_pump_overclocked
     #                          ])
-    fig = review_prediction_trace(model, files=validation_files)
+    fig = review_prediction_trace(files=validation_files, model=model, baseline_model=baseline_model)
     print("Displaying")
     show_figure(fig)
     print("Done")
@@ -47,20 +51,29 @@ def train_params(files):
     return curve_fit_torque(trace_data, fn=tune_all_params, guess=None)
 
 
-def review_prediction_trace(model, files):
+def review_prediction_trace(files, model, baseline_model=None):
     titles = [str(file) for file in files for _ in range(1)]
     fig = subplots.make_subplots(rows=len(files), cols=1, shared_xaxes=True, shared_yaxes=True, subplot_titles=titles)
 
-    for file, i in zip(files, range(1, len(files) + 1)):
+    for file, row in zip(files, range(1, len(files) + 1)):
+        col = 1
         trace_data = read_files(file)
 
         print("Validation: Filtering out pedal under 95")
         trace_data = filter_pedal_application(trace_data, pedal_min=95)
 
-        # make_subplot_graph(fig, trace_data, x_axis=C.ACCELERATOR_PEDAL, y_axis="R torque", row=i, col=1, name=file)
-        make_subplot_graph(fig, trace_data, x_axis=C.SPEED, y_axis=C.ACCELERATOR_PEDAL, row=i, col=1, color='gray')
-        make_subplot_graph(fig, trace_data, x_axis="Speed", y_axis="R torque", row=i, col=1,
+        make_subplot_graph(fig, trace_data, x_axis=C.SPEED, y_axis=C.ACCELERATOR_PEDAL, row=row, col=col, color='gray')
+        make_subplot_graph(fig, trace_data, x_axis="Speed", y_axis="R torque", row=row, col=col,
                            torque_estimate=lambda data: torque_prediction_model.predict_torque_frame(data, **model))
+        if baseline_model is not None:
+            fig.add_trace(
+                displays.expected_power_from_throttle(
+                    trace_data.sort_values(by=C.SPEED, inplace=False), C.SPEED,
+                    estimate_fun=lambda data: torque_prediction_model.predict_torque_frame(data, **baseline_model),
+                    marker={'color': 'grey'}
+                ),
+                row=row, col=col
+            )
 
     fig.update_layout(height=len(files * 600))
     return fig

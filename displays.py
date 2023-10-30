@@ -9,7 +9,7 @@ from data import C
 
 
 def make_subplot_graph(fig: plotly.graph_objs.Figure, trace_data: pandas.DataFrame, x_axis: string = "R torque",
-                       y_axis: string = "Battery current", row: int = 1, col: int = 1,
+                       y_axis: string = "", row: int = 1, col: int = 1,
                        torque_estimate=None, color: string = None, name: string = None,
                        trace_kwargs: dict = {"secondary_y": False}, scatter_kwargs: dict = {}) -> None:
     if name is None:
@@ -42,13 +42,12 @@ def make_subplot_graph(fig: plotly.graph_objs.Figure, trace_data: pandas.DataFra
         )
 
 
-def expected_power_from_throttle(local_data, axis,
-                                 estimate_fun=lambda frame: -59.24 + (3.59 * frame[C.ACCELERATOR_PEDAL])):
+def expected_power_from_throttle(local_data, axis, estimate_fun, prediction_name="prediction", marker={'color': 'red'}):
     trend_x = local_data[axis]
     trend_y = local_data.apply(estimate_fun, axis=1)
 
     return go.Scattergl(
-        x=trend_x, y=trend_y, name="prediction", mode="markers", marker={'color': 'red'}
+        x=trend_x, y=trend_y, name=prediction_name, mode="markers", marker=marker
     )
 
 
